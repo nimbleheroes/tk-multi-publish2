@@ -36,6 +36,8 @@ shotgun_globals = sgtk.platform.import_framework(
 logger = sgtk.platform.get_logger(__name__)
 
 
+from .publish_ui import PluginWindows
+
 class AppDialog(QtGui.QWidget):
     """
     Main dialog window for the App
@@ -264,6 +266,8 @@ class AppDialog(QtGui.QWidget):
         self.ui.text_below_item_tree.setVisible(self.manual_load_enabled)
         self.ui.browse.setVisible(self.manual_load_enabled)
 
+        self.plugin_ui = PluginWindows()
+
         # run collections
         self._full_rebuild()
 
@@ -411,16 +415,17 @@ class AppDialog(QtGui.QWidget):
             return
 
         # We're changing task, so we need to backup the current settings.
-        if self._current_tasks:
-            logger.debug("Saving settings...")
-            self._pull_settings_from_ui(self._current_tasks)
+        # if self._current_tasks:
+        #     logger.debug("Saving settings...")
+        #     self._pull_settings_from_ui(self._current_tasks)
 
         # If we're moving to a task that doesn't have a custom UI, clear everything.
         if not new_task_selection:
             # Note: At this point we don't really care if current task actually had a UI, we can
             # certainly tear down an empty widget.
-            logger.debug("The ui is going to change, so clear the current one.")
-            self.ui.task_settings.widget = None
+            logger.debug(
+                "The ui is going to change, so clear the current one.")
+            # self.ui.task_settings.widget = None
             self._current_tasks = new_task_selection
             return
 
@@ -431,28 +436,18 @@ class AppDialog(QtGui.QWidget):
         self.ui.task_icon.setPixmap(new_task_selection.plugin.icon)
         self.ui.task_name.setText(new_task_selection.plugin.name)
 
-        # Now figure out if we need to create/replace the widgets.
-        if (
-            # If we had a selection before
-            self._current_tasks
-            and
-            # and it was of the same type as the new one.
-            self._current_tasks.is_same_task_type(new_task_selection)
-        ):
-            logger.debug("Reusing custom ui from %s.", new_task_selection.plugin)
-        else:
-            logger.debug("Building a custom ui for %s.", new_task_selection.plugin)
-            widget = new_task_selection.plugin.run_create_settings_widget(
-                self.ui.task_settings_parent, new_task_selection.get_task_items()
-            )
-            self.ui.task_settings.widget = widget
-
         # Update the UI with the settings from the current plugin.
         if self._push_settings_into_ui(new_task_selection):
             # Alright, we're ready to deal with the new task.
             self._current_tasks = new_task_selection
         else:
             self._current_tasks = _TaskSelection()
+
+        self.plugin_ui.track_plugin_item(
+            self._current_tasks,
+            dialog=self,
+        )
+
 
     def _pull_settings_from_ui(self, selected_tasks):
         """
@@ -461,19 +456,21 @@ class AppDialog(QtGui.QWidget):
         :param selected_tasks: A :class:`TaskSelection` of tasks to update based
             on the values edited in the UI.
         """
-        if selected_tasks.has_custom_ui:
-            widget = self.ui.task_settings.widget
-            settings = self._current_tasks.get_settings(widget)
-        else:
-            # TODO: Implement getting the settings from the generic UI, if we ever implement one.
-            settings = {}
+        # if selected_tasks.has_custom_ui:
+        #     widget = self.ui.task_settings.widget
+        #     settings = self._current_tasks.get_settings(widget)
+        # else:
+        #     # TODO: Implement getting the settings from the generic UI, if we ever implement one.
+        #     settings = {}
 
-        # Update the values in all the tasks.
-        for task in selected_tasks:
-            # The settings returned by the UI are actual values, not Settings objects, so apply each
-            # value returned on the appropriate settings object.
-            for k, v in settings.items():
-                task.settings[k].value = v
+        # # Update the values in all the tasks.
+        # for task in selected_tasks:
+        #     # The settings returned by the UI are actual values, not Settings objects, so apply each
+        #     # value returned on the appropriate settings object.
+        #     for k, v in settings.items():
+        #         task.settings[k].value = v
+        pass
+        # TODO: proper pull behavior for settings
 
     def _push_settings_into_ui(self, selected_tasks):
         """
@@ -484,25 +481,27 @@ class AppDialog(QtGui.QWidget):
         """
         # The run_get_ui_settings expects a dictionary of the actual values, not Setting objects, so
         # translate the dictionary.
-        tasks_settings = []
-        for task in selected_tasks:
-            settings_dict = {}
-            for k, v in task.settings.items():
-                settings_dict[k] = v.value
-            tasks_settings.append(settings_dict)
 
-        if selected_tasks.has_custom_ui:
-            try:
-                selected_tasks.set_settings(
-                    self.ui.task_settings.widget, tasks_settings
-                )
-            except NotImplementedError:
-                self.ui.details_stack.setCurrentIndex(self.MULTI_EDIT_NOT_SUPPORTED)
-                return False
-        else:
-            # TODO: Implement setting the settings into the generic UI.
-            pass
+        # tasks_settings = []
+        # for task in selected_tasks:
+        #     settings_dict = {}
+        #     for k, v in task.settings.items():
+        #         settings_dict[k] = v.value
+        #     tasks_settings.append(settings_dict)
+
+        # if selected_tasks.has_custom_ui:
+        #     try:
+        #         selected_tasks.set_settings(
+        #             self.ui.task_settings.widget, tasks_settings
+        #         )
+        #     except NotImplementedError:
+        #         self.ui.details_stack.setCurrentIndex(self.MULTI_EDIT_NOT_SUPPORTED)
+        #         return False
+        # else:
+        #     # TODO: Implement setting the settings into the generic UI.
+        #     pass
         return True
+        # TODO: proper push behavior for settings 
 
     def _on_publish_status_clicked(self, task_or_item):
         """
