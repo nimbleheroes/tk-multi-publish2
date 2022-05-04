@@ -271,6 +271,11 @@ class AppDialog(QtGui.QWidget):
         # run collections
         self._full_rebuild()
 
+        # TODO: Drive this by config
+        self.resize(1300, 850)
+        self.ui.splitter.setSizes([550, 800])
+
+
     @property
     def manual_load_enabled(self):
         """ Returns whether user is allowed to load file to the UI """
