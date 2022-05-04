@@ -278,7 +278,7 @@ class AppDialog(QtGui.QWidget):
 
     @property
     def manual_load_enabled(self):
-        """ Returns whether user is allowed to load file to the UI """
+        """Returns whether user is allowed to load file to the UI"""
         return self._bundle.get_setting("enable_manual_load")
 
     def keyPressEvent(self, event):
@@ -1407,7 +1407,11 @@ class AppDialog(QtGui.QWidget):
                 continue
 
             self._progress_handler.push(
-                "%s: %s" % (stage_name, ui_item,),
+                "%s: %s"
+                % (
+                    stage_name,
+                    ui_item,
+                ),
                 ui_item.icon,
                 ui_item.get_publish_instance(),
             )
